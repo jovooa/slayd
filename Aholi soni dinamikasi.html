@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aholi soni dinamikasi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0b1430; --ink2:#12214a; --card:rgba(255,255,255,.055); --line:rgba(255,255,255,.12);
+  --paper:#f4efe2; --muted:#a9b4d0; --turq:#27c5be; --saffron:#f4b73f; --coral:#ef6b5b; --lapis:#5b7cff;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif; --sans:'Manrope',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--ink);color:var(--paper);font-family:var(--sans);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+/* Samarqand kafelidan ilhomlangan fon naqshi */
+.bg{position:fixed;inset:0;z-index:0;background:
+  radial-gradient(900px 600px at 85% -10%,rgba(39,197,190,.22),transparent 60%),
+  radial-gradient(800px 600px at -10% 110%,rgba(91,124,255,.25),transparent 60%),
+  linear-gradient(160deg,var(--ink),var(--ink2));}
+.bg svg{position:absolute;inset:0;width:100%;height:100%;opacity:.07}
+.deck{position:relative;z-index:1;height:100%;}
+.slide{position:absolute;inset:0;padding:clamp(18px,4vw,56px) clamp(18px,5vw,72px) 84px;display:flex;flex-direction:column;justify-content:center;
+  opacity:0;visibility:hidden;transform:translateX(40px);transition:opacity .55s ease,transform .55s ease,visibility 0s .55s;overflow-y:auto}
+.slide.active{opacity:1;visibility:visible;transform:none;transition:opacity .55s ease,transform .55s ease}
+.slide.prev{transform:translateX(-40px)}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(18px,3.5vw,52px);align-items:center;max-width:1280px;width:100%;margin:0 auto}
+.copy{max-width:520px}
+.tag{display:inline-block;font-size:13px;font-weight:600;color:var(--turq);border:1px solid rgba(39,197,190,.45);border-radius:999px;padding:5px 12px;margin-bottom:16px}
+h1,h2{font-family:var(--serif);font-weight:700;line-height:1.08;letter-spacing:-.01em}
+h2{font-size:clamp(26px,3.6vw,46px);margin-bottom:16px}
+p{font-size:clamp(15px,1.45vw,18px);line-height:1.65;color:#d6dcee}
+p+p{margin-top:12px}
+b,strong{color:var(--saffron);font-weight:700}
+.chartbox{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:clamp(12px,2vw,26px);backdrop-filter:blur(6px);position:relative;height:clamp(280px,56vh,500px)}
+.chartbox canvas{width:100%!important;height:100%!important}
+.note{font-size:12.5px;color:var(--muted);margin-top:12px}
+.stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:22px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-width:110px}
+.stat .n{font-family:var(--serif);font-size:28px;font-weight:700;color:var(--saffron);line-height:1}
+.stat .l{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+/* 1-slayd: sarlavha */
+.hero{max-width:1100px;margin:0 auto;width:100%;text-align:left}
+.hero h1{font-size:clamp(38px,8vw,104px);font-weight:800;line-height:.98}
+.hero .sub{font-size:clamp(16px,2vw,22px);color:#cdd5ee;max-width:640px;margin-top:22px;line-height:1.55}
+.counter{margin-top:38px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.counter .big{font-family:var(--serif);font-weight:800;font-size:clamp(46px,9vw,120px);color:var(--saffron);line-height:1;font-variant-numeric:tabular-nums}
+.counter .unit{font-size:clamp(14px,1.8vw,20px);color:var(--muted);max-width:260px;line-height:1.4}
+.hint{margin-top:34px;font-size:14px;color:var(--muted)}
+
+/* formula / omillar */
+.formula{margin-top:20px;background:rgba(244,183,63,.1);border:1px solid rgba(244,183,63,.4);border-radius:16px;padding:16px 18px;font-family:var(--serif);font-size:clamp(16px,1.8vw,22px);line-height:1.5}
+.factors{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:center}
+.factor{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.factor .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;margin-bottom:12px}
+.factor h3{font-family:var(--serif);font-size:20px;margin-bottom:6px}
+.factor p{font-size:14.5px;line-height:1.55}
+.factor.up .ic{background:rgba(39,197,190,.18)} .factor.down .ic{background:rgba(239,107,91,.18)}
+.factor.mig .ic{background:rgba(91,124,255,.22)} .factor.eco .ic{background:rgba(244,183,63,.18)}
+
+/* bosqichlar */
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}
+.stg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center;font-size:12.5px;line-height:1.35;color:#cfd7ee}
+.stg strong{display:block;font-family:var(--serif);font-size:16px;margin-bottom:3px}
+
+/* xulosa */
+.takeaways{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1280px;margin:30px auto 0;width:100%}
+.take{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px}
+.take h3{font-family:var(--serif);font-size:22px;margin-bottom:8px}
+.take:nth-child(1) h3{color:var(--turq)} .take:nth-child(2) h3{color:var(--saffron)} .take:nth-child(3) h3{color:var(--coral)}
+.take p{font-size:15px}
+.titleblock{max-width:1280px;margin:0 auto;width:100%}
+
+/* boshqaruv */
+.ui{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px clamp(14px,4vw,40px) calc(14px + env(safe-area-inset-bottom,0px))}
+.dots{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.22);border:0;cursor:pointer;padding:0;transition:.25s}
+.dot.on{background:var(--saffron);transform:scale(1.35)}
+.btn{background:var(--card);border:1px solid var(--line);color:var(--paper);height:44px;min-width:44px;padding:0 16px;border-radius:999px;font:600 14px var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .2s}
+.btn:hover{background:rgba(255,255,255,.14)}
+.btn:focus-visible,.dot:focus-visible{outline:2px solid var(--saffron);outline-offset:3px}
+.btn[disabled]{opacity:.35;cursor:default}
+.progress{position:fixed;top:env(safe-area-inset-top,0px);left:0;height:4px;background:linear-gradient(90deg,var(--turq),var(--saffron));z-index:6;transition:width .5s ease;width:0}
+.count{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:clamp(14px,3vw,32px);z-index:5;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.spacer{display:flex;gap:8px}
+
+@media (max-width:860px){
+  .grid{grid-template-columns:1fr}
+  .copy{max-width:none}
+  .takeaways{grid-template-columns:1fr}
+  .slide{justify-content:flex-start;padding-top:40px}
+  .chartbox{height:clamp(240px,40vh,340px)}
+  .btn .t{display:none}
+  .dots{display:none}
+}
+@media (prefers-reduced-motion:reduce){.slide,.progress,.dot{transition:none}}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg"><defs>
+    <pattern id="tile" width="90" height="90" patternUnits="userSpaceOnUse">
+      <path d="M45 4 L56 34 L86 45 L56 56 L45 86 L34 56 L4 45 L34 34 Z" fill="none" stroke="#fff" stroke-width="1.2"/>
+      <circle cx="45" cy="45" r="9" fill="none" stroke="#fff" stroke-width="1"/>
+    </pattern></defs>
+    <rect width="100%" height="100%" fill="url(#tile)"/></svg>
+</div>
+<div class="progress" id="progress"></div>
+<div class="count" id="count">1 / 11</div>
+
+<main class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide active" data-id="title">
+  <div class="hero">
+    <span class="tag">Demografiya</span>
+    <h1>Aholi soni dinamikasi<br>va undagi o‘zgarishlar</h1>
+    <p class="sub">Insoniyat bir milliarddan sakkiz milliardgacha qanday o‘sdi, nega o‘sish sekinlashmoqda va O‘zbekistonda nima bo‘layotgani haqida.</p>
+    <div class="counter">
+      <div class="big" id="bigCount">0</div>
+      <div class="unit">milliard — 2025-yilda Yer yuzidagi taxminiy aholi soni</div>
+    </div>
+    <div class="hint">Keyingi slayd uchun → tugmasi yoki bo‘sh joyni bosing</div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-id="factors">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Asosiy tushunchalar</span>
+      <h2>Aholi soni nimaga qarab o‘zgaradi?</h2>
+      <p>Aholi dinamikasi — ma’lum hududda aholi sonining vaqt o‘tishi bilan o‘zgarishi. U ikki qismdan iborat: <b>tabiiy harakat</b> va <b>mexanik harakat</b> (migratsiya).</p>
+      <div class="formula">O‘sish = (tug‘ilganlar − vafot etganlar) + (kelganlar − ketganlar)</div>
+    </div>
+    <div class="factors">
+      <div class="factor up"><div class="ic">👶</div><h3>Tug‘ilish</h3><p>Oilada bolalar soni, nikoh yoshi, ta’lim va qadriyatlarga bog‘liq.</p></div>
+      <div class="factor down"><div class="ic">🩺</div><h3>O‘lim</h3><p>Tibbiyot, gigiyena va oziq-ovqat yaxshilangani sari kamayadi.</p></div>
+      <div class="factor mig"><div class="ic">🧳</div><h3>Migratsiya</h3><p>Ish, o‘qish, urush yoki ekologik sabablar tufayli ko‘chish.</p></div>
+      <div class="factor eco"><div class="ic">🏙️</div><h3>Iqtisodiyot</h3><p>Daromad o‘sgani sari oilalar kichrayadi, shaharlar kengayadi.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-id="history">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Tarix</span>
+      <h2>Ming yil sekin, ikki asrda portlash</h2>
+      <p>Milodiy 1800-yilga qadar dunyo aholisi bir milliardga zo‘rg‘a yetdi. Sanoat inqilobi, vaksinalar va toza suv o‘limni keskin kamaytirdi, tug‘ilish esa avvalgidek yuqori qoldi.</p>
+      <p>Natijada <b>1950–2025</b> yillarda aholi uch baravardan ko‘proq ko‘paydi.</p>
+      <div class="stats">
+        <div class="stat"><div class="n">1 mlrd</div><div class="l">1804-yil</div></div>
+        <div class="stat"><div class="n">8 mlrd</div><div class="l">2022-yil</div></div>
+      </div>
+    </div>
+    <div><div class="chartbox"><canvas id="c-history"></canvas></div><div class="note">Manba: BMT (UN WPP) va tarixiy baholar asosida, taxminiy qiymatlar.</div></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-id="billions">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Tezlanish</span>
+      <h2>Har bir yangi milliard tezroq keldi</h2>
+      <p>Birinchi milliardga insoniyat butun tarix davomida erishdi. Ikkinchisiga 123 yil ketdi, so‘nggi milliardlarga esa atigi <b>11–13 yil</b>.</p>
+      <p>Bugun bu tezlik pasayib bormoqda: to‘qqizinchi milliard oldingilariga qaraganda sekinroq keladi.</p>
+    </div>
+    <div><div class="chartbox"><canvas id="c-billions"></canvas></div><div class="note">Har bir milliardga yetish uchun ketgan yillar (taxminiy).</div></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-id="rate">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">O‘sish sur’ati</span>
+      <h2>Aholi ko‘paymoqda, lekin sekinroq</h2>
+      <p>Yillik o‘sish sur’ati <b>1960-yillarda 2,2%</b> bilan eng yuqori cho‘qqiga chiqdi. Bugun u taxminan 0,9%, yarim asrdan keyin esa 0,4% atrofida bo‘lishi kutilmoqda.</p>
+      <p>Ya’ni son hali o‘syapti, ammo o‘sish tezligi aniq kamaymoqda.</p>
+    </div>
+    <div><div class="chartbox"><canvas id="c-rate"></canvas></div><div class="note">Dunyo bo‘yicha yillik o‘sish, % (BMT prognozi asosida, taxminiy).</div></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-id="transition">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Nazariya</span>
+      <h2>Demografik o‘tish modeli</h2>
+      <p>Mamlakatlar rivojlanishi bilan avval o‘lim kamayadi, keyinroq tug‘ilish ham pasayadi. Ularning orasidagi “qaychi” aholi portlashini beradi.</p>
+      <div class="stages">
+        <div class="stg"><strong>1</strong>Ikkalasi yuqori</div>
+        <div class="stg"><strong>2</strong>O‘lim tushadi</div>
+        <div class="stg"><strong>3</strong>Tug‘ilish tushadi</div>
+        <div class="stg"><strong>4</strong>Ikkalasi past</div>
+      </div>
+    </div>
+    <div><div class="chartbox"><canvas id="c-transition"></canvas></div><div class="note">Namunaviy (nazariy) egri chiziqlar, 1000 aholiga nisbatan.</div></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-id="regions">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Hududlar</span>
+      <h2>Aholi qayerda yashaydi?</h2>
+      <p>Dunyo aholisining qariyb <b>60%</b> i Osiyoda yashaydi. Afrika esa eng tez o‘sayotgan qit’a: 2050-yilga kelib uning ulushi 25% dan oshishi kutiladi.</p>
+      <p>Yevropada esa aholi soni asta kamayib bormoqda.</p>
+    </div>
+    <div><div class="chartbox"><canvas id="c-regions"></canvas></div><div class="note">2025-yil, jami aholidagi ulush, % (taxminiy).</div></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-id="age">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Yosh tarkibi</span>
+      <h2>Yosh va keksa jamiyatlar</h2>
+      <p>Yosh tarkibi kelajakdagi o‘sishni belgilaydi. O‘zbekistonda bolalar ulushi yuqori, shuning uchun aholi hali uzoq o‘sadi. Yaponiyada esa <b>har uchinchi odam 65 dan oshgan</b>.</p>
+      <p>Keksa jamiyat ish kuchi tanqisligi va pensiya yuki bilan duch keladi.</p>
+    </div>
+    <div><div class="chartbox"><canvas id="c-age"></canvas></div><div class="note">Yosh guruhlari ulushi, % (yaxlitlangan taxminiy qiymatlar).</div></div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-id="urban">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">Urbanizatsiya</span>
+      <h2>Odamlar shaharlarga ko‘chmoqda</h2>
+      <p>1950-yilda har uch kishidan faqat bittasi shaharda yashagan. Bugun shahar aholisi <b>58%</b> dan oshdi, 2050-yilga kelib esa taxminan uchdan ikki qismga yetadi.</p>
+      <p>Bu transport, uy-joy, suv va ekologiya masalalarini keskinlashtiradi.</p>
+    </div>
+    <div><div class="chartbox"><canvas id="c-urban"></canvas></div><div class="note">Shahar aholisining ulushi, % (BMT, taxminiy).</div></div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-id="uzb">
+  <div class="grid">
+    <div class="copy">
+      <span class="tag">O‘zbekiston</span>
+      <h2>O‘zbekiston: mustaqillikdan buyon +16 million</h2>
+      <p>1991-yildan beri aholi soni qariyb <b>21 milliondan 37 milliongacha</b> ko‘paydi. O‘sish yosh tarkib va yuqori tug‘ilish hisobiga davom etmoqda, ammo yillik sur’at asta pasayyapti.</p>
+      <div class="stats">
+        <div class="stat"><div class="n">~37 mln</div><div class="l">2024-yil</div></div>
+        <div class="stat"><div class="n">~44 mln</div><div class="l">2050 (prognoz)</div></div>
+      </div>
+    </div>
+    <div><div class="chartbox"><canvas id="c-uzb"></canvas></div><div class="note">Million kishi. Yaxlitlangan taxminiy qiymatlar; 2030 va 2050 — prognoz (punktir). Aniq raqamlar uchun Statistika agentligiga qarang.</div></div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-id="end">
+  <div class="titleblock">
+    <span class="tag">Xulosa</span>
+    <h2 style="max-width:900px">Aholi o‘sishi tugamayapti, lekin shakli o‘zgarmoqda</h2>
+    <div class="takeaways">
+      <div class="take"><h3>Tezlik pasaymoqda</h3><p>O‘sish sur’ati 1960-yillardagi cho‘qqidan beri deyarli uch barobar kamaydi. BMT taxminiga ko‘ra, aholi asr o‘rtalarida 9–10 milliard atrofida turg‘unlashadi.</p></div>
+      <div class="take"><h3>Hududlar farqlanadi</h3><p>Afrika va Janubiy Osiyo o‘sishda davom etadi, Yevropa va Sharqiy Osiyoda esa aholi qariydi va qisqaradi.</p></div>
+      <div class="take"><h3>Qarorlar shunga bog‘liq</h3><p>Maktab, kasalxona, ish o‘rni va uy-joy rejalari aholining soni bilan birga yosh tarkibiga ham tayanishi kerak.</p></div>
+    </div>
+    <p class="hint" style="margin-top:28px">E’tiboringiz uchun rahmat!</p>
+  </div>
+</section>
+
+</main>
+
+<nav class="ui" aria-label="Slaydlar boshqaruvi">
+  <div class="spacer"><button class="btn" id="prev" aria-label="Oldingi slayd">← <span class="t">Orqaga</span></button></div>
+  <div class="dots" id="dots"></div>
+  <div class="spacer">
+    <button class="btn" id="full" aria-label="To‘liq ekran">⛶</button>
+    <button class="btn" id="next" aria-label="Keyingi slayd"><span class="t">Keyingi</span> →</button>
+  </div>
+</nav>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsEl=document.getElementById('dots');
+  const prog=document.getElementById('progress');
+  const cnt=document.getElementById('count');
+  const prevB=document.getElementById('prev'), nextB=document.getElementById('next');
+  let cur=0, charts={};
+
+  const C={turq:'#27c5be',saffron:'#f4b73f',coral:'#ef6b5b',lapis:'#5b7cff',paper:'#f4efe2',grid:'rgba(255,255,255,.09)',tick:'#a9b4d0'};
+  if(window.Chart){
+    Chart.defaults.color=C.tick;
+    Chart.defaults.font.family="'Manrope',system-ui,sans-serif";
+    Chart.defaults.font.size=13;
+    Chart.defaults.plugins.legend.labels.usePointStyle=true;
+    Chart.defaults.plugins.tooltip.backgroundColor='#0b1430';
+    Chart.defaults.plugins.tooltip.borderColor='rgba(255,255,255,.2)';
+    Chart.defaults.plugins.tooltip.borderWidth=1;
+    Chart.defaults.plugins.tooltip.padding=10;
+    Chart.defaults.maintainAspectRatio=false;
+  }
+  const scales=(yTitle,extra)=>({
+    x:{grid:{display:false},ticks:{autoSkip:true,maxRotation:0}},
+    y:Object.assign({grid:{color:C.grid},border:{display:false},beginAtZero:true,title:{display:!!yTitle,text:yTitle||''}},extra||{})
+  });
+  function grad(ctx,color,a1,a2){
+    const g=ctx.createLinearGradient(0,0,0,ctx.canvas.clientHeight||400);
+    g.addColorStop(0,color+a1);g.addColorStop(1,color+a2);return g;
+  }
+
+  const builders={
+    history(ctx){
+      return new Chart(ctx,{type:'line',data:{
+        labels:['1800','1850','1900','1950','1975','2000','2025','2050','2075','2100'],
+        datasets:[{label:'Aholi (mlrd)',data:[1.0,1.26,1.65,2.5,4.1,6.1,8.2,9.7,10.3,10.2],
+          borderColor:C.saffron,borderWidth:3,tension:.35,fill:true,backgroundColor:grad(ctx,'#f4b73f','66','05'),
+          pointRadius:4,pointBackgroundColor:C.saffron,pointHoverRadius:7,
+          segment:{borderDash:s=>s.p0DataIndex>=6?[6,6]:undefined}}]},
+        options:{scales:scales('Milliard kishi'),plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>' '+c.parsed.y+' mlrd'}}},animation:{duration:1600}}});
+    },
+    billions(ctx){
+      return new Chart(ctx,{type:'bar',data:{
+        labels:['2-mlrd','3-mlrd','4-mlrd','5-mlrd','6-mlrd','7-mlrd','8-mlrd'],
+        datasets:[{label:'Necha yil ketdi',data:[123,33,14,13,12,12,11],borderRadius:10,
+          backgroundColor:[C.coral,C.saffron,C.saffron,C.turq,C.turq,C.turq,C.turq]}]},
+        options:{scales:scales('Yil'),plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>' '+c.parsed.y+' yil'}}},animation:{duration:1400}}});
+    },
+    rate(ctx){
+      return new Chart(ctx,{type:'line',data:{
+        labels:['1950','1965','1980','1995','2010','2025','2050','2075','2100'],
+        datasets:[{label:'Yillik o‘sish, %',data:[1.8,2.1,1.8,1.4,1.2,0.9,0.4,0.1,0.0],
+          borderColor:C.turq,borderWidth:3,tension:.4,fill:true,backgroundColor:grad(ctx,'#27c5be','55','05'),
+          pointRadius:4,pointBackgroundColor:C.turq,pointHoverRadius:7,
+          segment:{borderDash:s=>s.p0DataIndex>=5?[6,6]:undefined}}]},
+        options:{scales:scales('% / yil'),plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>' '+c.parsed.y+' %'}}},animation:{duration:1600}}});
+    },
+    transition(ctx){
+      return new Chart(ctx,{type:'line',data:{
+        labels:['','1-bosqich','','2-bosqich','','3-bosqich','','4-bosqich',''],
+        datasets:[
+          {label:'Tug‘ilish',data:[40,40,38,34,27,19,14,12,11],borderColor:C.turq,backgroundColor:C.turq,borderWidth:3,tension:.45,pointRadius:0},
+          {label:'O‘lim',data:[38,36,28,18,12,9,9,9,10],borderColor:C.coral,backgroundColor:C.coral,borderWidth:3,tension:.45,pointRadius:0},
+          {label:'Aholi o‘sishi',data:[2,4,10,16,15,10,5,3,1],borderColor:C.saffron,backgroundColor:'rgba(244,183,63,.18)',borderWidth:2,borderDash:[5,5],tension:.45,pointRadius:0,fill:true}
+        ]},
+        options:{scales:{x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:0,font:{size:11}}},
+          y:{grid:{color:C.grid},border:{display:false},beginAtZero:true,ticks:{display:false}}},
+          plugins:{legend:{position:'bottom'},tooltip:{enabled:false}},animation:{duration:1800}}});
+    },
+    regions(ctx){
+      return new Chart(ctx,{type:'doughnut',data:{
+        labels:['Osiyo','Afrika','Yevropa','Lotin Amerikasi','Shim. Amerika','Okeaniya'],
+        datasets:[{data:[58.5,19.5,9,8,4.5,0.5],backgroundColor:[C.saffron,C.coral,C.lapis,C.turq,'#b58cf0','#8fa0c8'],
+          borderColor:'#0b1430',borderWidth:3,hoverOffset:12}]},
+        options:{cutout:'58%',plugins:{legend:{position:'right',labels:{padding:14}},
+          tooltip:{callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}}},animation:{duration:1500,animateRotate:true}}});
+    },
+    age(ctx){
+      return new Chart(ctx,{type:'bar',data:{
+        labels:['O‘zbekiston','Dunyo','Yaponiya'],
+        datasets:[
+          {label:'0–14 yosh',data:[28,25,11],backgroundColor:C.turq,borderRadius:6},
+          {label:'15–64 yosh',data:[66,65,59],backgroundColor:C.lapis,borderRadius:6},
+          {label:'65+ yosh',data:[6,10,30],backgroundColor:C.coral,borderRadius:6}
+        ]},
+        options:{indexAxis:'y',scales:{x:{stacked:true,max:100,grid:{color:C.grid},border:{display:false},ticks:{callback:v=>v+'%'}},
+          y:{stacked:true,grid:{display:false}}},
+          plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.x+'%'}}},animation:{duration:1400}}});
+    },
+    urban(ctx){
+      return new Chart(ctx,{type:'line',data:{
+        labels:['1950','1975','2000','2025','2050'],
+        datasets:[
+          {label:'Shahar',data:[30,38,47,58,68],borderColor:C.lapis,backgroundColor:grad(ctx,'#5b7cff','77','10'),borderWidth:3,tension:.35,fill:'origin',pointRadius:4,pointBackgroundColor:C.lapis},
+          {label:'Qishloq',data:[70,62,53,42,32],borderColor:C.saffron,borderWidth:3,tension:.35,pointRadius:4,pointBackgroundColor:C.saffron}
+        ]},
+        options:{scales:scales('Aholi ulushi, %',{max:100}),plugins:{legend:{position:'bottom'},
+          tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+'%'}}},animation:{duration:1600}}});
+    },
+    uzb(ctx){
+      return new Chart(ctx,{type:'bar',data:{
+        labels:['1991','2000','2010','2020','2024','2030*','2050*'],
+        datasets:[{label:'Aholi (mln)',data:[20.9,24.7,29.5,34.2,36.9,40,44],borderRadius:10,
+          backgroundColor:[C.turq,C.turq,C.turq,C.turq,C.saffron,'rgba(244,183,63,.35)','rgba(244,183,63,.35)'],
+          borderColor:C.saffron,borderWidth:(c)=>c.dataIndex>=5?2:0,borderDash:[5,4]}]},
+        options:{scales:scales('Million kishi'),plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>' ~'+c.parsed.y+' mln'}}},animation:{duration:1500}}});
+    }
+  };
+
+  function mount(i){
+    const id=slides[i].dataset.id;
+    if(!builders[id]||!window.Chart) return;
+    if(charts[id]){charts[id].destroy();delete charts[id];}
+    const cv=slides[i].querySelector('canvas');
+    if(!cv) return;
+    charts[id]=builders[id](cv.getContext('2d'));
+  }
+
+  // Hisoblagich animatsiyasi
+  const big=document.getElementById('bigCount');
+  let raf;
+  function runCounter(){
+    cancelAnimationFrame(raf);
+    const target=8.2,dur=2200,t0=performance.now();
+    const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    if(reduce){big.textContent=target.toFixed(1).replace('.',',');return;}
+    (function step(t){
+      const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
+      big.textContent=(target*e).toFixed(1).replace('.',',');
+      if(p<1) raf=requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function go(n){
+    n=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,i)=>{
+      s.classList.toggle('active',i===n);
+      s.classList.toggle('prev',i<n);
+    });
+    cur=n;
+    prog.style.width=((n+1)/slides.length*100)+'%';
+    cnt.textContent=(n+1)+' / '+slides.length;
+    [...dotsEl.children].forEach((d,i)=>d.classList.toggle('on',i===n));
+    prevB.disabled=n===0; nextB.disabled=n===slides.length-1;
+    slides[n].scrollTop=0;
+    if(n===0) runCounter();
+    setTimeout(()=>mount(n),120);
+    try{history.replaceState(null,'','#'+(n+1));}catch(e){}
+  }
+
+  slides.forEach((s,i)=>{
+    const d=document.createElement('button');
+    d.className='dot';d.setAttribute('aria-label',(i+1)+'-slayd');
+    d.addEventListener('click',()=>go(i));
+    dotsEl.appendChild(d);
+  });
+  prevB.addEventListener('click',()=>go(cur-1));
+  nextB.addEventListener('click',()=>go(cur+1));
+  document.getElementById('full').addEventListener('click',()=>{
+    try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(e){}
+  });
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();go(cur+1);}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(cur-1);}
+    else if(e.key==='Home') go(0);
+    else if(e.key==='End') go(slides.length-1);
+  });
+  let sx=null;
+  document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(sx===null) return;
+    const dx=e.changedTouches[0].clientX-sx; sx=null;
+    if(Math.abs(dx)>60) go(cur+(dx<0?1:-1));
+  },{passive:true});
+
+  let start=0;
+  const h=parseInt((location.hash||'').replace('#',''),10);
+  if(h>=1&&h<=slides.length) start=h-1;
+  go(start);
+  window.addEventListener('load',()=>mount(cur));
+})();
+</script>
+</body>
+</html>
